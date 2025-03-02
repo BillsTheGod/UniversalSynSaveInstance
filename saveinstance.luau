@@ -1659,6 +1659,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 		-- MaxThreads = 3 -- Description: The number of decompilation threads that can run at once. More threads means it can decompile for scripts at a time.
 		-- DisableCompression = false, --Description: Disables compression in the binary output
 
+		DecompileAllowed = {}
 		DecompileJobless = false,
 		DecompileIgnore = { -- * Clean these up (merged Old Syn and New Syn)
 			-- "Chat",
@@ -1814,7 +1815,8 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 		end
 
 		local Type = typeof(CustomOptions)
-
+		local DecompileAllowed
+		
 		if Type == "table" then
 			if typeof(CustomOptions[1]) == "Instance" then
 				OPTIONS.mode = "invalidmode"
@@ -2209,6 +2211,15 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 		end
 	end
 
+	local function shouldDecompileScript(script)
+        if not isLuaSourceContainer(script) then
+            return false
+        end
+
+        -- Check if the script name is explicitly allowed in the whitelist
+        return OPTIONS.DecompileAllowed[script.Name] == true
+    end
+
 	do
 		local Decompiler = decompile--OPTIONS.decomptype == "custom" and custom_decompiler or decompile or custom_decompiler
 
@@ -2231,6 +2242,9 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 			local decomp = construct_TimeoutHandler(Timeout, Decompiler, "Decompiler timed out")
 
 			ldecompile = function(script)
+				if not shouldDecompileScript(script) then
+                    return "-- This script is ignored (not whitelisted)"
+                end
 				-- local name = scr.ClassName .. scr.Name
 				local hashed_bytecode
 				if ScriptCache then
